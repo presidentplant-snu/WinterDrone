@@ -18,24 +18,23 @@ project(WinterDrone C CXX ASM)
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-add_subdirectory(sensors)
-add_subdirectory(motor)
+add_subdirectory(drivers)
 
 # rest of your project
-add_executable(main
+add_executable(${PROJECT_NAME}
     main.c
 )
 
 # Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(main 
+target_link_libraries(${PROJECT_NAME} 
 	pico_stdlib 
 	pico_cyw43_arch_none
-	sensors
-	motor)
+	drivers
+)
     
 
-pico_enable_stdio_usb(main 1)
-pico_enable_stdio_uart(main 0)
+pico_enable_stdio_usb(${PROJECT_NAME} 1)
+pico_enable_stdio_uart(${PROJECT_NAME} 0)
 
 # create map/bin/hex/uf2 file in addition to ELF.
-pico_add_extra_outputs(main)
+pico_add_extra_outputs(${PROJECT_NAME})
