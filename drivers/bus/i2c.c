@@ -13,7 +13,7 @@ int init_i2c(i2c_inst_t *i2c,uint sda_pin, uint scl_pin)
 	gpio_pull_up(scl_pin);
 
 	// Make the I2C pins available to picotool
-	bi_decl(bi_2pins_with_func(sda_pin, scl_pin, GPIO_FUNC_I2C));
+	//bi_decl(bi_2pins_with_func(sda_pin, scl_pin, GPIO_FUNC_I2C));
 }
 
 int i2c_write_registers(i2c_inst_t *i2c, uint8_t addr, uint8_t RA, uint8_t *buf, size_t len){

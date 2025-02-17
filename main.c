@@ -1,17 +1,26 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
-
-#include "sensors/mpu6050.h"
-#include "bus/i2c.h"
+#include "pico/time.h"
+#include "motor/motor.h"
 
 int main() {
 	stdio_init_all();
-
-	init_i2c(PICO_DEFAULT_I2C, PICO_DEFAULT_I2C_SDA_PIN,PICO_DEFAULT_I2C_SCL_PIN);
-
-	initMPU(PICO_DEFAULT_I2C,ACCEL_16G,GYRO_2000_DPS,DLPF_none);
-
+	uint8_t pins[4]= {10, 11, 12, 13};
+	initMotors(pins);
     printf("Hello, world!\n");
-
-    return 0;
+	int speeds[4]={10, 11,0,0};
+	
+	while(1){
+		*speeds=0;
+		*(speeds+1)=0;
+		setSpeeds(speeds);
+		printf("Testing1");
+		sleep_ms	(1000);
+		*speeds=100;
+		*(speeds+1)=100;
+		setSpeeds(speeds);
+		printf("Testing2");
+		sleep_ms	(1000);
+	}
+	return 0;
 }
