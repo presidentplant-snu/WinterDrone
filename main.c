@@ -4,25 +4,27 @@
 #include "pico/time.h"
 #include "bus/i2c.h"
 #include "pico/binary_info.h"
-#include "drivers/sensors/mpu6050.h"
+#include "drivers/sensors/bmp280.h"
 #include "motor/motor.h"
 
 int main() {
 	stdio_init_all();
 
 	init_i2c(i2c_default);
-
- bi_decl(bi_2pins_with_func(PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C));
-
-	initBarometer(i2c_default,BARO_STANDARD);
-
-	float pressure=0,baro_temp = 0;
+ 	bi_decl(bi_2pins_with_func(PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C));
+	
+	initBMP(i2c_default);
+	calibrateBMP(i2c_default);
+	
+	uint32_t pressure =0;
+	int32_t temperature = 0;
 
 	while(1){
- readBarometer(i2c_default,&pressure, &baro_temp);
-		printf("Pressure: %f", pressure);
+ 		int a=	readBMP(i2c_default, &pressure, &temperature);
+		if(a == PICO_ERROR_GENERIC) printf("error\n");
+		printf("Pressure: %f", (float)pressure/25600.0);
 		//printf("Pressure:\n");
-		printf("\t Temperature: %f\n",baro_temp);
+		printf("\t Temperature: %f\n",(float)temperature/100.0);
 		sleep_ms(1000);
 	}
 
