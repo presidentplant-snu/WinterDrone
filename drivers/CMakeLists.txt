@@ -1,5 +1,6 @@
 add_library(drivers 
 	sensors/mpu6050.c 
+	sensors/bmp280.c 
 	motor/motor.c
 	bus/i2c.c
 	)

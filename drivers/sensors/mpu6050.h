@@ -1,9 +1,6 @@
 #pragma once
 #include "hardware/i2c.h"
 
-// BMP280/BME280 I2C Address
-#define BMP280_ADDR 0x76
-
 /*
  * Accelerometer Scale Factors           Gyroscope Scale Factors  
  * +-----------------+------------+      +-----------------+------------+
@@ -58,19 +55,7 @@ typedef enum {
 	DLPF_6 = 6,
 } DLPF_config_t;
 
-typedef enum {
-    BARO_ULTRA_LOW_POWER = 0b00,
-    BARO_LOW_POWER       = 0b01,
-    BARO_STANDARD        = 0b10,
-    BARO_HIGH_RES        = 0b11,
-    BARO_ULTRA_HIGH_RES  = 0b100
-} baro_config_t;
 
 int initMPU(i2c_inst_t *i2c, accel_scale_t accel_scale, gyro_scale_t gyro_scale, DLPF_config_t dlpf_config);
 
 int readMPU(i2c_inst_t *i2c, float accel[3], float gyro[3], float *temp, accel_scale_t accel_scale, gyro_scale_t gyro_scale);
-
-int initBarometer(i2c_inst_t *i2c);
-int readBarometer(i2c_inst_t *i2c, float *pressure, float *baro_temp);
-
-int readSensors(i2c_inst_t *i2c, float accel[3], float gyro[3], float *mpu_temp, float *pressure, float *baro_temp);
