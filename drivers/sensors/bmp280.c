@@ -31,7 +31,7 @@ int initBMP(i2c_inst_t *i2c){
 	if(ret == PICO_ERROR_GENERIC) return ret;
 
 	// t_sb = 000 (0.5ms), filter = 010 (x4), 
-	buf = ((0x04 << 5) | (0x05 << 2)) & 0xFC;
+	buf = ((0x00 << 5) | (0x02 << 2)) & 0xFC;
 	ret = i2c_write_registers(i2c,addr,0xF5,&buf,1);
 	if(ret == PICO_ERROR_GENERIC) return ret;
 
@@ -44,13 +44,10 @@ int calibrateBMP(i2c_inst_t *i2c){
 
 	ret = i2c_read_registers(i2c, addr, 0x88, buf, 24);
 	if(ret == PICO_ERROR_GENERIC) return ret;
-
 	for(int i=0; i<24; i++) calibrationVals[i]=buf[i];
 
 	return ret;
 }
-
-
 
 int readBMP(i2c_inst_t *i2c, uint32_t *pressure, int32_t *temperature){
 	int ret = PICO_OK;
@@ -64,7 +61,6 @@ int readBMP(i2c_inst_t *i2c, uint32_t *pressure, int32_t *temperature){
 	ret = i2c_read_registers(i2c, addr, 0xFA, buf, 3);
 	if(ret == PICO_ERROR_GENERIC) return ret;
 	*temperature = bmp280_compensate_T_int32(((int32_t)buf[0] << 12) | ((int32_t)buf[1] << 4) | (((int32_t)buf[2]&(0xF0)) >> 4) );
-
 
 	return ret;
 }
@@ -91,7 +87,6 @@ return T;
 // Output value of “24674867” represents 24674867/256 = 96386.2 Pa = 963.862 hPa
 static uint32_t bmp280_compensate_P_int64(int32_t adc_P)
 {
-
 uint16_t dig_P1 = (calibrationVals[7] << 8) | calibrationVals[6];
 int16_t dig_P2 = (calibrationVals[9] << 8) | calibrationVals[8];
 int16_t dig_P3 = (calibrationVals[11] << 8) | calibrationVals[10];
@@ -101,7 +96,6 @@ int16_t dig_P6 = (calibrationVals[17] << 8) | calibrationVals[16];
 int16_t dig_P7 = (calibrationVals[19] << 8) | calibrationVals[18];
 int16_t dig_P8 = (calibrationVals[21] << 8) | calibrationVals[20];
 int16_t dig_P9 = (calibrationVals[23] << 8) | calibrationVals[22];
-
 
 int64_t var1, var2, p;
 var1 = ((int64_t)t_fine) - 128000;
