@@ -17,11 +17,16 @@ cmake_minimum_required(VERSION 3.13...3.27)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-
+# set(CMAKE_C_FLAGS "-Wall -Wextra")
+add_compile_options(-Wall -Wno-format -Wno-unused-function
+					-Wno-maybe-uninitalized)
 #set(ENV{PICO_SDK_PATH} "path to pico sdk")
 
 set(PICO_BOARD pico2_w)
+set(PICO_PLATFORM "rp2350")
+set(PICO_RP2350 "1" CACHE INTERNAL "")
+
+set(FREERTOS_KERNEL_PATH "${CMAKE_SOURCE_DIR}/include/FreeRTOS-Kernel/")
 
 # initialize the SDK based on PICO_SDK_PATH
 include(pico_sdk_import.cmake)
@@ -32,6 +37,8 @@ project(WinterDrone C CXX ASM)
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+include("${CMAKE_SOURCE_DIR}/freeRTOS/FreeRTOS_Kernel_import.cmake")
+
 add_subdirectory(drivers)
 
 # rest of your project
@@ -39,16 +46,23 @@ add_executable(${PROJECT_NAME}
     main.c
 )
 
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/freeRTOS")
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
+
 # Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME} PRIVATE
 	pico_stdlib 
-	pico_cyw43_arch_none
+	pico_cyw43_arch_lwip_threadsafe_background
 	drivers
+	FreeRTOS-Kernel-Heap4
 )
     
 
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
-pico_enable_stdio_uart(${PROJECT_NAME} 0)
+pico_enable_stdio_uart(${PROJECT_NAME} 0)    
+
+# Wait 3s for serial to start for debugging
+set(PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS 3000)
 
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(${PROJECT_NAME})
