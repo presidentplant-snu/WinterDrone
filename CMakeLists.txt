@@ -1,68 +1,67 @@
-# # == DO NOT EDIT THE FOLLOWING LINES for the Raspberry Pi Pico VS Code Extension to work ==
-# if(WIN32)
-#     set(USERHOME $ENV{USERPROFILE})
-# else()
-#     set(USERHOME $ENV{HOME})
-# endif()
-# set(sdkVersion 2.1.0)
-# set(toolchainVersion 13_3_Rel1)
-# set(picotoolVersion 2.1.0)
-# set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
-# if (EXISTS ${picoVscode})
-#     include(${picoVscode})
-# endif()
-# ====================================================================================
 cmake_minimum_required(VERSION 3.13...3.27)
-
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-# set(CMAKE_C_FLAGS "-Wall -Wextra")
-add_compile_options(-Wall -Wno-format -Wno-unused-function
-					-Wno-maybe-uninitalized)
-#set(ENV{PICO_SDK_PATH} "path to pico sdk")
+# add_compile_options(-Wall -Wno-format -Wno-unused-function -Wno-uninitalized)
 
+# Added for mongoose
+add_compile_options(-fno-tree-loop-distribute-patterns)
+
+# Configure Pico board
 set(PICO_BOARD pico2_w)
 set(PICO_PLATFORM "rp2350")
 set(PICO_RP2350 "1" CACHE INTERNAL "")
-
 set(FREERTOS_KERNEL_PATH "${CMAKE_SOURCE_DIR}/include/FreeRTOS-Kernel/")
 
-# initialize the SDK based on PICO_SDK_PATH
+# Initialize the SDK based on PICO_SDK_PATH
 include(pico_sdk_import.cmake)
-
+include("${CMAKE_SOURCE_DIR}/freeRTOS/FreeRTOS_Kernel_import.cmake")
 project(WinterDrone C CXX ASM)
 
-
-# initialize the Raspberry Pi Pico SDK
+# Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-include("${CMAKE_SOURCE_DIR}/freeRTOS/FreeRTOS_Kernel_import.cmake")
+include_directories(
+	"${CMAKE_SOURCE_DIR}/config"
+)
 
+# Import FreeRTOS and add subdirectories
+add_subdirectory(freeRTOS)
 add_subdirectory(drivers)
+add_subdirectory(mongoose)
 
-# rest of your project
+# Define main executable
 add_executable(${PROJECT_NAME}
     main.c
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/freeRTOS")
-target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
+# Configure include directories
+target_include_directories(${PROJECT_NAME} PUBLIC 
+    "${CMAKE_SOURCE_DIR}"
+)
 
-# Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(${PROJECT_NAME} PRIVATE
-	pico_stdlib 
-	pico_cyw43_arch_lwip_threadsafe_background
-	drivers
+
+# Link libraries
+target_link_libraries(${PROJECT_NAME} 
+    pico_stdlib 
+	#pico_cyw43_arch_lwip_threadsafe_background
+	#pico_cyw43_arch_lwip_sys_freertos
 	FreeRTOS-Kernel-Heap4
+    drivers
+	mongoose
 )
     
-
+# Configure stdio
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
-pico_enable_stdio_uart(${PROJECT_NAME} 0)    
+pico_enable_stdio_uart(${PROJECT_NAME} 0)
 
 # Wait 3s for serial to start for debugging
 set(PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS 3000)
 
-# create map/bin/hex/uf2 file in addition to ELF.
+# Set Default IP for AP
+pico_configure_ip4_address(${PROJECT_NAME} PRIVATE
+    CYW43_DEFAULT_IP_AP_ADDRESS 192.168.4.1
+)
+
+# Create map/bin/hex/uf2 file in addition to ELF
 pico_add_extra_outputs(${PROJECT_NAME})
