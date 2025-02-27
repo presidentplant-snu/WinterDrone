@@ -5,6 +5,7 @@ add_library(drivers
     motor/motor.c
     bus/i2c.c
     wifi/wifi.c
+    battery/battery.c
 )
 
 # Make the drivers directory available as an include path
