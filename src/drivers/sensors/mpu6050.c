@@ -35,7 +35,8 @@ int initMPU(i2c_inst_t *i2c, accel_scale_t accel_scale, gyro_scale_t gyro_scale,
 	sleep_ms(10); // Allow stabilization after waking up
 
 	// Set config
-
+	//uint8_t buf2[2] = {0x6B,0x00};
+    //i2c_write_blocking(i2c_default, addr, buf2, 2, false); 
 	// CONFIG Register
 	// Address: 0x1A, -, -, EXT_SYNC_SET[2:0], DLPF_CFG[2:0]
 	// GYRO_CONFIG Register
@@ -52,7 +53,7 @@ int initMPU(i2c_inst_t *i2c, accel_scale_t accel_scale, gyro_scale_t gyro_scale,
 
 	ret=i2c_write_registers(i2c,addr,RA,config,3);
 	if(ret == PICO_ERROR_GENERIC) return ret;
-
+	
 	return PICO_OK;
 }
 
@@ -70,7 +71,6 @@ int readMPU(i2c_inst_t *i2c, float accel[3], float gyro[3], float *temp,
 
 	ret = readMPUraw(i2c,rawAccel,rawGyro,&rawTemp);
 	if(ret == PICO_ERROR_GENERIC) return ret;
-
 	*temp =  (float)rawTemp/340 + 36.53;
 
 	for(int i=0; i<3; i++){
