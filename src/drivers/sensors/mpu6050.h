@@ -58,4 +58,6 @@ typedef enum {
 
 int initMPU(i2c_inst_t *i2c, accel_scale_t accel_scale, gyro_scale_t gyro_scale, DLPF_config_t dlpf_config);
 
-int readMPU(i2c_inst_t *i2c, float accel[3], float gyro[3], float *temp, accel_scale_t accel_scale, gyro_scale_t gyro_scale);
+int readMPU(float accel[3], float gyro[3], float *temp);
+bool calibrate_mpu6050() ;
+int readMPUCalibrated(float accel[3], float gyro[3], float *temp);

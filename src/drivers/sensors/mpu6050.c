@@ -1,22 +1,35 @@
 #include "sensors/mpu6050.h"
-
+#include <stdio.h>
 #include <string.h>
 
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
 #include "hardware/i2c.h"
+#include <pico/time.h>
 
 #include "bus/i2c.h"
 
 // I2C Address of MPU6050
 static const int addr = 0x68;
 
+static i2c_inst_t *i2c;
 
-static int readMPUraw(i2c_inst_t *i2c, int16_t accel[3], int16_t gyro[3], int16_t *temp);
-static void getScaleFactors(float scalefactors[2], accel_scale_t accel_scale, gyro_scale_t gyro_scale);
+static accel_scale_t accel_scale=ACCEL_16G;
+static gyro_scale_t gyro_scale=GYRO_2000_DPS;
+static float scaleFactors[2];
 
+static int readMPUraw(int16_t accel[3], int16_t gyro[3], int16_t *temp);
+static void getScaleFactors(float scalefactors[2]);
+static void apply_calibration(const float accel_raw[3], const float gyro_raw[3], 
+                       float accel_calibrated[3], float gyro_calibrated[3]);
 
-int initMPU(i2c_inst_t *i2c, accel_scale_t accel_scale, gyro_scale_t gyro_scale, DLPF_config_t dlpf_config){
+int initMPU(i2c_inst_t *i2c_set, accel_scale_t accel_scale_set, gyro_scale_t gyro_scale_set, DLPF_config_t dlpf_config){
+	accel_scale = accel_scale_set;
+	gyro_scale = gyro_scale_set;
+	getScaleFactors(scaleFactors);
+
+	i2c = i2c_set;
+
 	int ret = 0;
 
 	// Reset device
@@ -57,19 +70,14 @@ int initMPU(i2c_inst_t *i2c, accel_scale_t accel_scale, gyro_scale_t gyro_scale,
 	return PICO_OK;
 }
 
-int readMPU(i2c_inst_t *i2c, float accel[3], float gyro[3], float *temp, 
-		accel_scale_t accel_scale, gyro_scale_t gyro_scale){
-
+int readMPU(float accel[3], float gyro[3], float *temp){
 	int ret = 0;
 
-	float scaleFactors[2]={1};
 	int16_t rawAccel[3] = {0};
 	int16_t rawGyro[3] = {0};	
 	int16_t rawTemp = 0;	
 
-	getScaleFactors(scaleFactors,accel_scale,gyro_scale);
-
-	ret = readMPUraw(i2c,rawAccel,rawGyro,&rawTemp);
+	ret = readMPUraw(rawAccel,rawGyro,&rawTemp);
 	if(ret == PICO_ERROR_GENERIC) return ret;
 	*temp =  (float)rawTemp/340 + 36.53;
 
@@ -81,7 +89,17 @@ int readMPU(i2c_inst_t *i2c, float accel[3], float gyro[3], float *temp,
 	return PICO_OK;
 }
 
-static int readMPUraw(i2c_inst_t *i2c, int16_t accel[3], int16_t gyro[3], int16_t *temp){
+int readMPUCalibrated(float accel[3], float gyro[3], float *temp){
+
+	float accel_raw[3] = {0}, gyro_raw[3]= {0};
+	int ret = readMPU(accel_raw,gyro_raw,temp);
+	if(ret == PICO_ERROR_GENERIC) return ret;
+	apply_calibration(accel_raw,gyro_raw,accel,gyro);
+	
+	return PICO_OK;
+}
+
+static int readMPUraw(int16_t accel[3], int16_t gyro[3], int16_t *temp){
 	int ret=0;
 	uint8_t buffer[14]={0};
 
@@ -105,7 +123,7 @@ static int readMPUraw(i2c_inst_t *i2c, int16_t accel[3], int16_t gyro[3], int16_
 	return PICO_OK;
 }
 
-static void getScaleFactors(float scalefactors[2], accel_scale_t accel_scale, gyro_scale_t gyro_scale){
+static void getScaleFactors(float scalefactors[2]){
 	switch (accel_scale) {
 		case ACCEL_2G:
 			scalefactors[0] = 16384;
@@ -115,6 +133,8 @@ static void getScaleFactors(float scalefactors[2], accel_scale_t accel_scale, gy
 			scalefactors[0] = 4096;
 		case ACCEL_16G:
 			scalefactors[0] = 2048;
+		default:
+			scalefactors[0]=2048;
 	}
 	switch (gyro_scale) {
 		case GYRO_250_DPS:
@@ -125,6 +145,94 @@ static void getScaleFactors(float scalefactors[2], accel_scale_t accel_scale, gy
 			scalefactors[1] = 32.8;
 		case GYRO_2000_DPS:
 			scalefactors[1] = 16.4;
+		default:
+			scalefactors[1]=16.4;
 	}
+}
+
+// Calibration parameters
+#define CALIB_SAMPLES 1000      // Number of samples to collect (adjust based on your sample rate)
+#define CALIB_DISCARD 100      // Initial samples to discard (settling time)
+
+// Calibration offsets - these will be applied to raw sensor readings
+typedef struct {
+    float accel_offset[3];    // X, Y, Z acceleration offsets
+    float gyro_offset[3];     // X, Y, Z gyroscope offsets
+} mpu_calibration_t;
+
+// Global calibration values
+static mpu_calibration_t mpu_calibration = {
+    .accel_offset = {0.0f, 0.0f, 0.0f},
+    .gyro_offset = {0.0f, 0.0f, 0.0f}
+};
+
+bool calibrate_mpu6050() {
+    // Variables for accumulating readings
+    float accel_sum[3] = {0.0f, 0.0f, 0.0f};
+    float gyro_sum[3] = {0.0f, 0.0f, 0.0f};
+   	float temp = 0; 
+    // Raw sensor readings
+    float accel_raw[3], gyro_raw[3];
+    
+    // Discard initial readings to let sensors stabilize
+    for (int i = 0; i < CALIB_DISCARD; i++) {
+        // Read raw values from MPU6050 - replace with your actual reading function
+        readMPU(accel_raw, gyro_raw,  &temp);
+        sleep_ms(5);  // Small delay between readings
+    }
+    
+    // Collect and average samples for calibration
+    for (int i = 0; i < CALIB_SAMPLES; i++) {
+        // Read raw values from MPU6050 - replace with your actual reading function
+        readMPU(accel_raw, gyro_raw,  &temp);
+        
+        // Accumulate values
+        for (int j = 0; j < 3; j++) {
+            accel_sum[j] += accel_raw[j];
+            gyro_sum[j] += gyro_raw[j];
+        }
+        
+        sleep_ms(5);  // Small delay between readings
+        
+        // Show progress
+        if (i % 100 == 0) {
+            printf("Calibration progress: %d%%\n", (i * 100) / CALIB_SAMPLES);
+        }
+    }
+    
+    // Calculate average offsets
+    for (int i = 0; i < 3; i++) {
+        mpu_calibration.gyro_offset[i] = gyro_sum[i] / CALIB_SAMPLES;
+        
+        // For accelerometer, we only want to remove the bias, not gravity
+        mpu_calibration.accel_offset[i] = accel_sum[i] / CALIB_SAMPLES;
+    }
+    
+    // The Z-axis accelerometer should read approximately 1g (9.81 m/s²) when stationary
+    // Adjust Z offset to preserve gravity
+    
+    mpu_calibration.accel_offset[2]-=1;
+
+    // Print calibration values
+    printf("Calibration complete!\n");
+    printf("Accel offsets (X,Y,Z): %.4f, %.4f, %.4f\n", 
+           mpu_calibration.accel_offset[0], 
+           mpu_calibration.accel_offset[1], 
+           mpu_calibration.accel_offset[2]);
+    printf("Gyro offsets (X,Y,Z): %.4f, %.4f, %.4f\n", 
+           mpu_calibration.gyro_offset[0], 
+           mpu_calibration.gyro_offset[1], 
+           mpu_calibration.gyro_offset[2]);
+           
+    return true;
+}
+
+static void apply_calibration(const float accel_raw[3], const float gyro_raw[3], 
+                       float accel_calibrated[3], float gyro_calibrated[3]) {
+    // Apply offsets to each axis
+    for (int i = 0; i < 3; i++) {
+        accel_calibrated[i] = accel_raw[i] - mpu_calibration.accel_offset[i];
+        gyro_calibrated[i] = gyro_raw[i] - mpu_calibration.gyro_offset[i];
+    }
 }
 
