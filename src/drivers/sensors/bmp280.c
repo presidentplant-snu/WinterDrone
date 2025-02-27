@@ -11,12 +11,14 @@
 // I2C Address of MPU6050
 static const int addr = 0x76;
 
+static i2c_inst_t* i2c;
 static uint8_t calibrationVals[24]={0};
 
 static int32_t bmp280_compensate_T_int32(int32_t adc_T);
 static uint32_t bmp280_compensate_P_int64(int32_t adc_P);
 
-int initBMP(i2c_inst_t *i2c){
+int initBMP(i2c_inst_t *i2c_set){
+	i2c = i2c_set;
 	int ret = PICO_OK;	
 	uint8_t buf = 0xB6;
 	
@@ -25,12 +27,12 @@ int initBMP(i2c_inst_t *i2c){
 	if(ret == PICO_ERROR_GENERIC) return ret;
 	sleep_ms(500); // Allow device to reset and stabilize
 	
-	// Set normal mode, 001(osrs_t) 011(osrs_p) 11(mode)
-	buf = 0b00101111;
+	// Set normal mode, 101(osrs_t, x16) 101(osrs_p, x16) 11(mode)
+	buf = 0b10110111;
 	ret = i2c_write_registers(i2c,addr,0xF4,&buf,1);
 	if(ret == PICO_ERROR_GENERIC) return ret;
 
-	// t_sb = 000 (0.5ms), filter = 010 (x4), 
+	// t_sb = 000 (0.5ms), IIR filter = 100 (x16), 
 	buf = ((0x00 << 5) | (0x02 << 2)) & 0xFC;
 	ret = i2c_write_registers(i2c,addr,0xF5,&buf,1);
 	if(ret == PICO_ERROR_GENERIC) return ret;
@@ -38,7 +40,7 @@ int initBMP(i2c_inst_t *i2c){
 	return ret;
 }
 
-int calibrateBMP(i2c_inst_t *i2c){
+int calibrateBMP(){
 	int ret =PICO_OK;
 	uint8_t buf[24] = {0};
 
@@ -49,7 +51,9 @@ int calibrateBMP(i2c_inst_t *i2c){
 	return ret;
 }
 
-int readBMP(i2c_inst_t *i2c, uint32_t *pressure, int32_t *temperature){
+
+// Returns temp in 0.01 degC, pressure in 256Pa
+int readBMP(uint32_t *pressure, int32_t *temperature){
 	int ret = PICO_OK;
 	uint8_t buf[3] = {0};
 
@@ -67,7 +71,7 @@ int readBMP(i2c_inst_t *i2c, uint32_t *pressure, int32_t *temperature){
 
 
 static int32_t t_fine;
-// Returns temperature in DegC
+// Returns temperature in 0.01 DegC
 static int32_t bmp280_compensate_T_int32(int32_t adc_T)
 {
 uint16_t dig_T1 = (calibrationVals[1] << 8) | calibrationVals[0];
