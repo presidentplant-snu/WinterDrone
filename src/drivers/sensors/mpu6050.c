@@ -1,4 +1,4 @@
-#include "sensors/mpu6050.h"
+sinclude "sensors/mpu6050.h"
 
 #include <string.h>
 
@@ -124,7 +124,7 @@ static void getScaleFactors(float scalefactors[2], accel_scale_t accel_scale, gy
 		case GYRO_1000_DPS:
 			scalefactors[1] = 32.8;
 		case GYRO_2000_DPS:
-			scalefactors[1] = 2048;
+			scalefactors[1] = 16.4;
 	}
 }
 
