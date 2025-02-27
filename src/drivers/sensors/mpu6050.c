@@ -1,4 +1,4 @@
-sinclude "sensors/mpu6050.h"
+#include "sensors/mpu6050.h"
 
 #include <string.h>
 
