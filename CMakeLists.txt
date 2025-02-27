@@ -11,11 +11,11 @@ add_compile_options(-fno-tree-loop-distribute-patterns)
 set(PICO_BOARD pico2_w)
 set(PICO_PLATFORM "rp2350")
 set(PICO_RP2350 "1" CACHE INTERNAL "")
-set(FREERTOS_KERNEL_PATH "${CMAKE_SOURCE_DIR}/include/FreeRTOS-Kernel/")
+set(FREERTOS_KERNEL_PATH "${CMAKE_SOURCE_DIR}/src/include/FreeRTOS-Kernel/")
 
 # Initialize the SDK based on PICO_SDK_PATH
 include(pico_sdk_import.cmake)
-include("${CMAKE_SOURCE_DIR}/freeRTOS/FreeRTOS_Kernel_import.cmake")
+include("${CMAKE_SOURCE_DIR}/src/freeRTOS/FreeRTOS_Kernel_import.cmake")
 project(WinterDrone C CXX ASM)
 
 # Initialize the Raspberry Pi Pico SDK
@@ -26,18 +26,19 @@ include_directories(
 )
 
 # Import FreeRTOS and add subdirectories
-add_subdirectory(freeRTOS)
-add_subdirectory(drivers)
-add_subdirectory(mongoose)
+add_subdirectory(src/freeRTOS)
+add_subdirectory(src/drivers)
+add_subdirectory(src/mongoose)
+add_subdirectory(src/core)
 
 # Define main executable
 add_executable(${PROJECT_NAME}
-    main.c
+    src/main.c
 )
 
 # Configure include directories
 target_include_directories(${PROJECT_NAME} PUBLIC 
-    "${CMAKE_SOURCE_DIR}"
+    "${CMAKE_SOURCE_DIR}/src/"
 )
 
 
@@ -49,6 +50,7 @@ target_link_libraries(${PROJECT_NAME}
 	FreeRTOS-Kernel-Heap4
     drivers
 	mongoose
+	core
 )
     
 # Configure stdio

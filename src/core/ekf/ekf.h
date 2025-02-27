@@ -1,13 +1,3 @@
-// MPU6050 I2C address
-#define MPU6050_ADDR 0x68
-
-// MPU6050 registers
-#define MPU6050_ACCEL_XOUT_H 0x3B
-#define MPU6050_GYRO_XOUT_H  0x43
-#define MPU6050_PWR_MGMT_1   0x6B
-#define HMC5883L_ADDR 0x1E  // Default I2C address of HMC5883L
-
-
 // Constants
 #define GRAVITY 9.81f
 #define RAD_TO_DEG 57.295779513f
@@ -26,8 +16,6 @@ void EKF_Update(float accel[3], float mx, float my, float mz);
 void matrix_multiply(float *A, float *B, float *C, int m, int n, int p);
 void matrix_transpose(float *A, float *AT, int m, int n);
 void matrix_inverse(float *A, float *Ainv, int n);
-void HMC5883L_Init();
-void HMC5883L_Read(i2c_inst_t *i2c, float *mx, float *my, float *mz);
 
 // Global variables
 float X[STATE_DIM];       // State vector

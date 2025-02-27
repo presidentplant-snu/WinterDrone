@@ -1,52 +1,8 @@
 #include "ekf.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <stdint.h>
-#include "bus/i2c.h"
-#include "sensors/mpu6050.h"
-
-// Measurements from accelerometer (roll, pitch) and magnetometer (yaw)
-/**
- * Initialize the Extended Kalman Filter
- */
-i2c_inst_t *i2c=i2c_default;
-
-void HMC5883L_Init() {
-    uint8_t configA = 0x70;  // 8 samples, 15Hz output rate, normal mode
-    uint8_t configB = 0xA0;  // Gain setting
-    uint8_t mode    = 0x00;  // Continuous measurement mode
-
-    i2c_write_blocking(i2c, HMC5883L_ADDR, (uint8_t[]){0x00, configA}, 2, false);
-    i2c_write_blocking(i2c, HMC5883L_ADDR, (uint8_t[]){0x01, configB}, 2, false);
-    i2c_write_blocking(i2c, HMC5883L_ADDR, (uint8_t[]){0x02, mode}, 2, false);
-}
-
-/**
- * Read Magnetometer Values (X, Y, Z)
- */
-void HMC5883L_Read(i2c_inst_t *i2c, float *mx, float *my, float *mz) {
-    uint8_t buffer[6];
-    int16_t raw_x, raw_y, raw_z;
-
-    // Read 6 bytes from magnetometer (X, Z, Y)
-    int ret = i2c_read_blocking(i2c, HMC5883L_ADDR, 0x03, buffer, 6);
-    if (ret == PICO_ERROR_GENERIC) {
-        printf("Error reading HMC5883L!\n");
-        return;
-    }
-
-    // Convert to 16-bit signed values
-    raw_x = (buffer[0] << 8) | buffer[1];
-    raw_z = (buffer[2] << 8) | buffer[3];
-    raw_y = (buffer[4] << 8) | buffer[5];
-
-    // Convert raw values to microteslas (µT)
-    float scale = 0.92f;  // Default scale for HMC5883L
-    *mx = raw_x * scale;
-    *my = raw_y * scale;
-    *mz = raw_z * scale;
-}
 
 void EKF_Init(void) {
     // Initialize state vector to zeros
