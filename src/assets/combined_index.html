@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Winter Drone Controller</title>
+
+<style>        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: scroll;
+        }
+        
+        .controller-container {
+            display: flex;
+            flex-direction: column;
+            background-color: #333;
+            border-radius: 20px;
+            padding: 4%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 800px;
+            /*max-height: 95vh;
+            overflow: scroll;*/
+        }
+        
+        .controller-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #444;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .controller-title {
+            color: #fff;
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        
+        .arming-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .controller-status {
+            color: #ff3333;
+            font-weight: bold;
+            font-size: 1rem;
+            margin-right: 5px;
+        }
+        
+        .controller-status.armed {
+            color: #33ff33;
+        }
+        
+        .controller-main {
+            display: flex;
+            justify-content: space-evenly;
+            width: 100%;
+            flex-wrap: nowrap;
+            flex: 1;
+            min-height: 50vh;
+        }
+        
+        .joystick-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 45%;
+            max-width: 300px;
+        }
+        
+        .joystick-label {
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        .joystick {
+            width: 50%;
+			aspect-ratio: 1;
+            /*padding-bottom: 100%;  Makes it a perfect circle */
+            border-radius: 50%;
+            background-color: #444;
+            position: relative;
+            touch-action: none;
+            user-select: none;
+        }
+        
+        .stick {
+            width: 30%;
+            height: 30%;
+            background-color: #ddd;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stick:active {
+            cursor: grabbing;
+            background-color: #fff;
+        }
+        
+        .arming-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .arming-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #666;
+            border-radius: 24px;
+            transition: .4s;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: #ddd;
+            border-radius: 50%;
+            transition: .4s;
+        }
+        
+        input:checked + .slider {
+            background-color: #ff3333;
+        }
+        
+        input:focus + .slider {
+            box-shadow: 0 0 1px #ff3333;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .arming-label {
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        
+        .controller-values {
+            background-color: #222;
+            color: #33ff33;
+            padding: 10px;
+            border-radius: 10px;
+            font-family: monospace;
+            margin-top: 15px;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 0.9rem;
+        }
+
+
+.telemetry-textbox {
+    margin-top: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.telemetry-textbox-header {
+    color: #fff;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+#telemetry-textbox {
+    width: 100%;
+    height: 80px;
+    background-color: #222;
+    color: #33ff33;
+    font-family: monospace;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    resize: none;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
+/* Modify for better fit */
+@media (max-height: 700px) {
+    #telemetry-textbox {
+        height: 60px;
+    }
+}
+        
+        .telemetry-section {
+            margin-top: 15px;
+            border-top: 2px solid #444;
+            padding-top: 15px;
+        }
+        
+        .telemetry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .telemetry-title {
+            color: #fff;
+            font-size: 1rem;
+            margin: 0;
+        }
+        
+.telemetry-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    position: absolute;
+    width: 100%;
+    background-color: #333;
+    border-radius: 0 0 20px 20px;
+    padding: 0 4%;
+    box-sizing: border-box;
+    left: 0;
+}
+
+.telemetry-content.expanded {
+    max-height: 400px;
+    padding: 15px 4%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+        
+        .telemetry-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .telemetry-controls label {
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        
+        .telemetry-controls input {
+            width: 80px;
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+        }
+        
+        .telemetry-log {
+            background-color: #222;
+            color: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            font-family: monospace;
+            width: 100%;
+            height: 100px;
+            overflow-y: auto;
+            box-sizing: border-box;
+            font-size: 0.8rem;
+        }
+        
+        .telemetry-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+        
+        .chevron {
+            color: #fff;
+            transition: transform 0.3s ease;
+        }
+        
+        .chevron.up {
+            transform: rotate(180deg);
+        }
+        
+        @media (max-height: 700px) {
+            .controller-container {
+                padding: 2%;
+            }
+            
+            .controller-header {
+                padding-bottom: 10px;
+                margin-bottom: 10px;
+            }
+            
+            .controller-values {
+                margin-top: 10px;
+                padding: 5px;
+            }
+            .telemetry-section {
+    margin-top: 15px;
+    border-top: 2px solid #444;
+    padding-top: 15px;
+    position: relative;
+}
+        }
+        
+        @media (max-width: 500px) {
+            .controller-title {
+                font-size: 1.2rem;
+            }
+            
+            .controller-status {
+                font-size: 0.9rem;
+            }
+            
+            .joystick-label {
+                font-size: 0.8rem;
+            }
+        }
+
+</style></head>
+<body>
+<div class="controller-container">
+<div class="controller-header">
+<h1 class="controller-title">Winter Drone Controller</h1>
+<div class="arming-container">
+<span class="arming-label">ARM</span>
+<label class="arming-switch">
+<input id="arming-switch" type="checkbox"/>
+<span class="slider"></span>
+</label>
+<div class="controller-status" id="arming-status">DISARMED</div>
+</div>
+</div>
+<div class="controller-main">
+<div class="joystick-container">
+<div class="joystick-label">Left Joystick (Throttle/Yaw)</div>
+<div class="joystick" id="joystick1">
+<div class="stick" id="stick1"></div>
+</div>
+</div>
+<div class="joystick-container">
+<div class="joystick-label">Right Joystick (Pitch/Roll)</div>
+<div class="joystick" id="joystick2">
+<div class="stick" id="stick2"></div>
+</div>
+</div>
+</div>
+<div class="controller-values" id="controller-values">
+            Throttle: 0%, Yaw: 0°, Pitch: 0°, Roll: 0°
+        </div>
+<div class="telemetry-section">
+<div class="telemetry-header" id="telemetry-toggle">
+<h3 class="telemetry-title">Telemetry &amp; Logs</h3>
+<div class="chevron">▼</div>
+</div>
+<div class="telemetry-content" id="telemetry-content">
+<div class="telemetry-controls">
+<label for="telemetry-interval">Telemetry interval (ms): </label>
+<input id="telemetry-interval" min="20" step="20" type="number" value="40"/>
+</div>
+<div class="telemetry-log" id="telemetry-log"></div>
+</div>
+</div>
+</div>
+
+<script>// Controller state
+const droneState = {
+	armed: false,
+	throttle: 0,   // 0-100%
+	yaw: 0,        // -180 to 180 degrees
+	pitch: 0,      // -90 to 90 degrees
+	roll: 0,       // -90 to 90 degrees
+	telemetryInterval: 40, // TODO add separate logic to receive pitch/roll/battery from drone, rename telemetry to control or whatever
+	telemetryIntervalId: null
+};
+
+// DOM Elements
+const controllerValues = document.getElementById('controller-values');
+const telemetryLog = document.getElementById('telemetry-log');
+const telemetryIntervalInput = document.getElementById('telemetry-interval');
+const chevron = document.querySelector('.chevron');
+
+const socket = new WebSocket("ws://192.168.4.1/ws");
+// Joystick elements
+const stick1 = document.getElementById('stick1');
+const joystick1 = document.getElementById('joystick1');
+const stick2 = document.getElementById('stick2');
+const joystick2 = document.getElementById('joystick2');
+
+/* ARMING SWITCH */
+// Handle arming switch, always disarm at the beginning
+const armingSwitch = document.getElementById('arming-switch');
+const armingStatus = document.getElementById('arming-status');
+
+armingSwitch.checked = false;
+armingStatus.textContent = 'DISARMED';
+armingStatus.classList.remove('armed');
+armingSwitch.addEventListener('change', function() {
+	droneState.armed = this.checked;
+
+	if (droneState.armed) {
+		armingStatus.textContent = 'ARMED';
+		armingStatus.classList.add('armed');
+
+		const packet = new Uint8Array(1);
+  		packet[0] = 0x00; // ARM command
+		socket.send(packet);
+
+		// Start telemetry when armed
+		startTelemetry();
+
+		// Log arming event
+		addLogEntry('Drone ARMED');
+	} else {
+		armingStatus.textContent = 'DISARMED';
+		armingStatus.classList.remove('armed');
+
+		const packet = new Uint8Array(1);
+  		packet[0] = 0x01; // ARM command
+		socket.send(packet);
+		// Stop telemetry when disarmed
+		stopTelemetry();
+
+		// Log disarming event
+		addLogEntry('Drone DISARMED');
+	}
+
+	// Update controller values display
+	updateControllerValues();
+});
+
+
+
+// Toggle telemetry section
+const telemetryToggle = document.getElementById('telemetry-toggle');
+const telemetryContent = document.getElementById('telemetry-content');
+telemetryToggle.addEventListener('click', function() {
+	telemetryContent.classList.toggle('expanded');
+	chevron.classList.toggle('up');
+});
+
+/* TELEMETRY */
+// Function to send telemetry data
+function sendTelemetry() {
+	// Create telemetry data object
+	const telemetryData = {
+		timestamp: new Date().toISOString(),
+		armed: droneState.armed,
+		throttle: droneState.throttle,
+		yaw: droneState.yaw,
+		pitch: droneState.pitch,
+		roll: droneState.roll
+	};
+
+  const packet = new Uint8Array(5); // 1 byte command + 4 bytes of joystick data
+  packet[0] = 0x02; // JOYSTICK command
+  packet[1] = droneState.throttle;
+  packet[2] = droneState.yaw;
+  packet[3] = droneState.pitch;
+  packet[4] = droneState.roll;
+  socket.send(packet);
+}
+
+// Function to start telemetry
+function startTelemetry() {
+	if (droneState.telemetryIntervalId) {
+		stopTelemetry();
+	}
+
+	// Send initial telemetry immediately
+	sendTelemetry();
+
+	// Set up interval for regular telemetry
+	droneState.telemetryIntervalId = setInterval(sendTelemetry, droneState.telemetryInterval);
+
+	addLogEntry(`Telemetry started (${droneState.telemetryInterval}ms interval)`);
+}
+
+// Function to stop telemetry
+function stopTelemetry() {
+	if (droneState.telemetryIntervalId) {
+		clearInterval(droneState.telemetryIntervalId);
+		droneState.telemetryIntervalId = null;
+
+		addLogEntry('Telemetry stopped');
+	}
+}
+
+// Handle telemetry interval change
+telemetryIntervalInput.addEventListener('change', function() {
+	const value = parseInt(this.value);
+	if (value >= 10) {
+		droneState.telemetryInterval = value;
+		addLogEntry(`Telemetry interval set to ${value}ms`);
+	}
+});
+
+
+// Joystick handling functions
+function setupJoystick(stickElement, joystickElement, updateFunction) {
+	let active = false;
+	let joystickRect, joystickRadius, stickRadius, maxDistance;
+
+	function updateJoystickDimensions() {
+		joystickRect = joystickElement.getBoundingClientRect();
+		joystickRadius = joystickRect.width / 2;
+		stickRadius = stickElement.offsetWidth / 2;
+		maxDistance = joystickRadius - stickRadius;
+	}
+
+	// Update dimensions initially and on window resize
+	updateJoystickDimensions();
+	window.addEventListener('resize', updateJoystickDimensions);
+
+	// Mouse events
+	stickElement.addEventListener('mousedown', startDrag);
+	document.addEventListener('mousemove', drag);
+	document.addEventListener('mouseup', endDrag);
+
+	// Touch events
+	stickElement.addEventListener('touchstart', startDrag);
+	document.addEventListener('touchmove', drag);
+	document.addEventListener('touchend', endDrag);
+
+	function startDrag(e) {
+
+		updateJoystickDimensions(); // Update dimensions on each start
+		active = true;
+		stickElement.style.transition = '0s';
+		e.preventDefault();
+	}
+
+	function drag(e) {
+		if (!active) return;
+
+		e.preventDefault();
+
+		const joystickRect = joystickElement.getBoundingClientRect();
+		const centerX = joystickRect.left + joystickRect.width / 2;
+		const centerY = joystickRect.top + joystickRect.height / 2;
+
+		// Get position either from mouse or touch
+		for(touch of e.touches){
+		let clientX, clientY;
+		if (e.type === 'touchmove') {
+			clientX = touch.clientX;
+			clientY = touch.clientY;
+		} else {
+			clientX = e.clientX;
+			clientY = e.clientY;
+		}
+
+		// Calculate distance from center
+		let deltaX = clientX - centerX;
+		let deltaY = clientY - centerY;
+
+		// Calculate distance from center (Pythagorean theorem)
+		const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+		// If the distance is greater than the max distance, scale it down
+	 if (distance > 3*maxDistance) {
+		 	console.log("contiuning");
+			continue;
+		}
+		else if (distance > maxDistance) {
+			const factor = maxDistance / distance;
+			deltaX *= factor;
+			deltaY *= factor;
+		}
+		// Move the stick (accounting for the initial -50%, -50% transform)
+		stickElement.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+
+		// Calculate values based on position
+		// Map X from -maxDistance to maxDistance => -100 to 100
+		const xPercent = (deltaX / maxDistance) * 100;
+		// Map Y from -maxDistance to maxDistance => -100 to 100
+		// Note: Y is inverted in the DOM, so we negate it
+		const yPercent = -(deltaY / maxDistance) * 100;
+
+		// Update the state based on which joystick is being used
+		updateFunction(xPercent, yPercent);
+
+		// Update display
+		updateControllerValues();
+		}
+	}
+
+	function endDrag(e) {
+		if (!active) return;
+	
+		if (e.type === 'touchend') {
+			console.log(e.changedTouches[0]);
+			if(e.changedTouches[0].target != stickElement){
+				return;
+			}
+		}
+
+		stickElement.style.transition = '0.2s';
+		// Don't reset throttle for stick1
+		if(e.changedTouches[0].target.id == "stick1"){
+		console.log(`translate(-50%,calc(-50%+${-(droneState.throttle*2 - 100)/100 * maxDistance}px))`);
+		stickElement.style.transform = `translate(-50%, calc(-50% + ${-(droneState.throttle*2 - 100)/100 * maxDistance}px))`;
+		updateFunction(0, NaN);
+		}
+		else{
+		stickElement.style.transform = 'translate(-50%, -50%)';
+		updateFunction(0, 0);
+		}
+
+		// Update display
+		updateControllerValues();
+		active = false;
+	}
+}
+
+// Function to update left joystick values (throttle/yaw)
+function updateLeftJoystick(x, y) {
+	// X controls yaw rate (-100 to 100 percent)
+	droneState.yaw = Math.round(x); 
+	
+	if(!isNaN(y)){ droneState.throttle = Math.round((y + 100) / 2);}
+	// Y controls throttle (0 to 100%)
+	// Map Y from -100 to 100 => 0 to 100
+	// When stick is at bottom (y = -100), throttle = 0
+	// When stick is at top (y = 100), throttle = 100
+}
+
+// Function to update right joystick values (pitch/roll)
+function updateRightJoystick(x, y) {
+	// X controls roll (-90 to 90 degrees)
+	droneState.roll = Math.round(x * 0.3); // Scale -100 to 100 to -90 to 90
+
+	// Y controls pitch (-90 to 90 degrees)
+	droneState.pitch = Math.round(y * 0.3); // Scale -100 to 100 to -90 to 90
+}
+
+// Function to reset joysticks to center position
+function resetJoysticks() {
+	stick1.style.transform = 'translate(-50%, -50%)';
+	stick2.style.transform = 'translate(-50%, -50%)';
+
+	// Reset values
+	droneState.throttle = 0;
+	droneState.yaw = 0;
+	droneState.pitch = 0;
+	droneState.roll = 0;
+
+	updateControllerValues();
+}
+
+// Function to update the controller values display
+function updateControllerValues() {
+	controllerValues.textContent = `Throttle: ${droneState.throttle}%, Yaw: ${droneState.yaw}%, Pitch: ${droneState.pitch}°, Roll: ${droneState.roll}°`;
+}
+
+// Function to add entry to telemetry log
+function addLogEntry(message) {
+	const entry = document.createElement('div');
+	entry.className = 'telemetry-entry';
+
+	const timestamp = new Date().toISOString().substr(11, 12);
+	entry.textContent = `[${timestamp}] ${message}`;
+
+	telemetryLog.appendChild(entry);
+	telemetryLog.scrollTop = telemetryLog.scrollHeight;
+
+	// Keep only the last 50 entries
+	while (telemetryLog.children.length > 50) {
+		telemetryLog.removeChild(telemetryLog.firstChild);
+	}
+}
+
+
+// Initialize joysticks
+setupJoystick(stick1, joystick1, updateLeftJoystick);
+setupJoystick(stick2, joystick2, updateRightJoystick);
+
+// Prevent scrolling when touching the controller area
+document.querySelector('.joystick-container').addEventListener('touchmove', function(e) {
+	e.preventDefault();
+}, { passive: false });
+
+// Initial update of controller values
+updateControllerValues();
+
+// Initial log entry
+addLogEntry('Drone controller initialized');
+
+</script></body>
+</html>

@@ -22,7 +22,7 @@ void initMotors(uint8_t pins[4]) {
     }
 }
 
-int setSpeeds(int speeds[4]) {
+int setSpeeds(uint16_t speeds[4]) {
     for (int i = 0; i < 4; i++) {
         int speed = speeds[i];
 

@@ -3,11 +3,13 @@
 #include "hardware/i2c.h"
 #include "pico/binary_info.h"
 
+#include "config.h"
+
 #include "bus/i2c.h"
 
 int init_i2c(i2c_inst_t *i2c)
 {   
-	i2c_init(i2c, 400 * 1000);
+	i2c_init(i2c, I2C_BAUD);
     gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
     gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);

@@ -9,3 +9,4 @@ Since the wifi (PicoTesting) doesn't have a DHCP server yet, one must connect vi
 ## TODO
 - Implement sensor fusion between IMU (MPU6050) and Barometer (BMP280)
 - Add DHCP server
+- Add Battery Check

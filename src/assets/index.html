@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winter Drone Controller</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="controller-container">
+        <div class="controller-header">
+            <h1 class="controller-title">Winter Drone Controller</h1>
+            <div class="arming-container">
+                <span class="arming-label">ARM</span>
+                <label class="arming-switch">
+                    <input type="checkbox" id="arming-switch">
+                    <span class="slider"></span>
+                </label>
+                <div id="arming-status" class="controller-status">DISARMED</div>
+            </div>
+        </div>
+        
+        <div class="controller-main">
+            <div class="joystick-container">
+                <div class="joystick-label">Left Joystick (Throttle/Yaw)</div>
+                <div id="joystick1" class="joystick">
+                    <div id="stick1" class="stick"></div>
+                </div>
+            </div>
+            
+            <div class="joystick-container">
+                <div class="joystick-label">Right Joystick (Pitch/Roll)</div>
+                <div id="joystick2" class="joystick">
+                    <div id="stick2" class="stick"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controller-values" id="controller-values">
+            Throttle: 0%, Yaw: 0°, Pitch: 0°, Roll: 0°
+        </div>
+        <div class="telemetry-section">
+            <div class="telemetry-header" id="telemetry-toggle">
+                <h3 class="telemetry-title">Telemetry & Logs</h3>
+                <div class="chevron">▼</div>
+            </div>
+            
+            <div class="telemetry-content" id="telemetry-content">
+                <div class="telemetry-controls">
+                    <label for="telemetry-interval">Telemetry interval (ms): </label>
+                    <input type="number" id="telemetry-interval" value="40" min="20" step="20">
+                </div>
+                <div class="telemetry-log" id="telemetry-log"></div>
+            </div>
+        </div>
+    </div>
+
+	<script src="index.js">  </script>
+</body>
+
+</html>

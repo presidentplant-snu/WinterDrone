@@ -28,6 +28,7 @@ include_directories(
 # Import FreeRTOS and add subdirectories
 add_subdirectory(src/freeRTOS)
 add_subdirectory(src/drivers)
+add_subdirectory(src/tasks)
 add_subdirectory(src/mongoose)
 add_subdirectory(src/core)
 
@@ -49,6 +50,7 @@ target_link_libraries(${PROJECT_NAME}
 	#pico_cyw43_arch_lwip_sys_freertos
 	FreeRTOS-Kernel-Heap4
     drivers
+	tasks
 	mongoose
 	core
 )

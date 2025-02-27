@@ -1,0 +1,333 @@
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: scroll;
+        }
+        
+        .controller-container {
+            display: flex;
+            flex-direction: column;
+            background-color: #333;
+            border-radius: 20px;
+            padding: 4%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 800px;
+            /*max-height: 95vh;
+            overflow: scroll;*/
+        }
+        
+        .controller-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #444;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .controller-title {
+            color: #fff;
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        
+        .arming-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .controller-status {
+            color: #ff3333;
+            font-weight: bold;
+            font-size: 1rem;
+            margin-right: 5px;
+        }
+        
+        .controller-status.armed {
+            color: #33ff33;
+        }
+        
+        .controller-main {
+            display: flex;
+            justify-content: space-evenly;
+            width: 100%;
+            flex-wrap: nowrap;
+            flex: 1;
+            min-height: 50vh;
+        }
+        
+        .joystick-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 45%;
+            max-width: 300px;
+        }
+        
+        .joystick-label {
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        .joystick {
+            width: 50%;
+			aspect-ratio: 1;
+            /*padding-bottom: 100%;  Makes it a perfect circle */
+            border-radius: 50%;
+            background-color: #444;
+            position: relative;
+            touch-action: none;
+            user-select: none;
+        }
+        
+        .stick {
+            width: 30%;
+            height: 30%;
+            background-color: #ddd;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stick:active {
+            cursor: grabbing;
+            background-color: #fff;
+        }
+        
+        .arming-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .arming-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #666;
+            border-radius: 24px;
+            transition: .4s;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: #ddd;
+            border-radius: 50%;
+            transition: .4s;
+        }
+        
+        input:checked + .slider {
+            background-color: #ff3333;
+        }
+        
+        input:focus + .slider {
+            box-shadow: 0 0 1px #ff3333;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .arming-label {
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        
+        .controller-values {
+            background-color: #222;
+            color: #33ff33;
+            padding: 10px;
+            border-radius: 10px;
+            font-family: monospace;
+            margin-top: 15px;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 0.9rem;
+        }
+
+
+.telemetry-textbox {
+    margin-top: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.telemetry-textbox-header {
+    color: #fff;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+#telemetry-textbox {
+    width: 100%;
+    height: 80px;
+    background-color: #222;
+    color: #33ff33;
+    font-family: monospace;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    resize: none;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
+/* Modify for better fit */
+@media (max-height: 700px) {
+    #telemetry-textbox {
+        height: 60px;
+    }
+}
+        
+        .telemetry-section {
+            margin-top: 15px;
+            border-top: 2px solid #444;
+            padding-top: 15px;
+        }
+        
+        .telemetry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .telemetry-title {
+            color: #fff;
+            font-size: 1rem;
+            margin: 0;
+        }
+        
+.telemetry-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    position: absolute;
+    width: 100%;
+    background-color: #333;
+    border-radius: 0 0 20px 20px;
+    padding: 0 4%;
+    box-sizing: border-box;
+    left: 0;
+}
+
+.telemetry-content.expanded {
+    max-height: 400px;
+    padding: 15px 4%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+        
+        .telemetry-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .telemetry-controls label {
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        
+        .telemetry-controls input {
+            width: 80px;
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+        }
+        
+        .telemetry-log {
+            background-color: #222;
+            color: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            font-family: monospace;
+            width: 100%;
+            height: 100px;
+            overflow-y: auto;
+            box-sizing: border-box;
+            font-size: 0.8rem;
+        }
+        
+        .telemetry-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+        
+        .chevron {
+            color: #fff;
+            transition: transform 0.3s ease;
+        }
+        
+        .chevron.up {
+            transform: rotate(180deg);
+        }
+        
+        @media (max-height: 700px) {
+            .controller-container {
+                padding: 2%;
+            }
+            
+            .controller-header {
+                padding-bottom: 10px;
+                margin-bottom: 10px;
+            }
+            
+            .controller-values {
+                margin-top: 10px;
+                padding: 5px;
+            }
+            .telemetry-section {
+    margin-top: 15px;
+    border-top: 2px solid #444;
+    padding-top: 15px;
+    position: relative;
+}
+        }
+        
+        @media (max-width: 500px) {
+            .controller-title {
+                font-size: 1.2rem;
+            }
+            
+            .controller-status {
+                font-size: 0.9rem;
+            }
+            
+            .joystick-label {
+                font-size: 0.8rem;
+            }
+        }
+
