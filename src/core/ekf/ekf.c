@@ -1,8 +1,16 @@
 #include "ekf.h"
+#include "linalg/linalg.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+
+float X[STATE_DIM];       // State vector
+float P[STATE_DIM][STATE_DIM];  // State covariance matrix
+float Q[STATE_DIM][STATE_DIM];  // Process noise covariance
+float R[MEAS_DIM][MEAS_DIM];    // Measurement noise covariance
+float F[STATE_DIM][STATE_DIM];  // State transition matrix
+float H[MEAS_DIM][STATE_DIM];   // Measurement matrix
 
 void EKF_Init(void) {
     // Initialize state vector to zeros
@@ -30,7 +38,7 @@ void EKF_Init(void) {
 /**
  * Prediction step of the EKF
  */
-void EKF_Predict(float gyro[3]) {
+void EKF_Predict(float gyro[3],float DT) {
     // Remove bias from gyro measurements
     float gx = gyro[0];
     float gy = gyro[1];
@@ -78,32 +86,18 @@ void EKF_Predict(float gyro[3]) {
     
     // Update state covariance matrix: P = J*P*J' + Q
     float JP[STATE_DIM][STATE_DIM] = {0};
+    float JT[STATE_DIM][STATE_DIM] = {0};
     float JPJT[STATE_DIM][STATE_DIM] = {0};
     
     // Calculate J*P
-    for (int i = 0; i < STATE_DIM; i++) {
-        for (int j = 0; j < STATE_DIM; j++) {
-            for (int k = 0; k < STATE_DIM; k++) {
-                JP[i][j] += J[i][k] * P[k][j];
-            }
-        }
-    }
+	//
+	matrix_multiply((float*)J,(float*)P,(float*)JP,STATE_DIM,STATE_DIM,STATE_DIM);
     
-    // Calculate (J*P)*J'
-    for (int i = 0; i < STATE_DIM; i++) {
-        for (int j = 0; j < STATE_DIM; j++) {
-            for (int k = 0; k < STATE_DIM; k++) {
-                JPJT[i][j] += JP[i][k] * J[j][k];  // Note: using J[j][k] instead of J[k][j] for transpose
-            }
-        }
-    }
+    // Calculate (J*P)*J^t
+	matrix_transpose((float*)J,(float*)JT,STATE_DIM,STATE_DIM);
+	matrix_multiply((float*)JP,(float*)JT,(float*)JPJT,STATE_DIM,STATE_DIM,STATE_DIM);
     
-    // Add process noise: P = JPJT + Q
-    for (int i = 0; i < STATE_DIM; i++) {
-        for (int j = 0; j < STATE_DIM; j++) {
-            P[i][j] = JPJT[i][j] + Q[i][j];
-        }
-    }
+	matrix_add((float*)JPJT,(float*)Q,(float*)P,STATE_DIM,STATE_DIM);
 }
 
 /**
@@ -122,11 +116,12 @@ void EKF_Update(float accel[3], float mx, float my, float mz) {
     float measured_roll = atan2(ay,az);
     float measured_pitch = atan2(-ax, sqrt(ay * ay + az * az));
     
-    // Calculate yaw from magnetometer (simplified)
-    float mag_x = mx * cos(measured_pitch) + mz * sin(measured_pitch);
-    float mag_y = mx * sin(measured_roll) * sin(measured_pitch) + my * cos(measured_roll) - 
-                 mz * sin(measured_roll) * cos(measured_pitch);
-    float measured_yaw = atan2(mag_y, mag_x);
+    // TODO Calculate yaw from magnetometer (simplified)
+//     float mag_x = mx * cos(measured_pitch) + mz * sin(measured_pitch);
+//     float mag_y = mx * sin(measured_roll) * sin(measured_pitch) + my * cos(measured_roll) - 
+                 //mz * sin(measured_roll) * cos(measured_pitch);
+    //float measured_yaw = atan2(mag_y, mag_x);
+    float measured_yaw = 0;
     
     // Create measurement vector
     float Z[MEAS_DIM] = {measured_roll, measured_pitch, measured_yaw};
@@ -153,72 +148,40 @@ void EKF_Update(float accel[3], float mx, float my, float mz) {
     H[2][2] = 1.0f;  // d(yaw_measurement)/d(yaw_state)
     
     // Innovation covariance: S = H*P*H' + R
+    float HT[STATE_DIM][MEAS_DIM] = {0};
     float HP[MEAS_DIM][STATE_DIM] = {0};
     float HPHT[MEAS_DIM][MEAS_DIM] = {0};
     
     // Calculate H*P
-    for (int i = 0; i < MEAS_DIM; i++) {
-        for (int j = 0; j < STATE_DIM; j++) {
-            for (int k = 0; k < STATE_DIM; k++) {
-                HP[i][j] += H[i][k] * P[k][j];
-            }
-        }
-    }
-    
-    // Calculate (H*P)*H'
-    for (int i = 0; i < MEAS_DIM; i++) {
-        for (int j = 0; j < MEAS_DIM; j++) {
-            for (int k = 0; k < STATE_DIM; k++) {
-                HPHT[i][j] += HP[i][k] * H[j][k];  // Note: using H[j][k] instead of H[k][j] for transpose
-            }
-        }
-    }
+	matrix_multiply((float*)H,(float*)P,(float*)HP,MEAS_DIM,STATE_DIM,STATE_DIM);
+
+   	 
+    // Calculate (HP)H^t
+	matrix_transpose((float*)H,(float*)HT,MEAS_DIM,STATE_DIM);
+	
+	matrix_multiply((float*)HP,(float*)HT,(float*)HPHT,MEAS_DIM,STATE_DIM,MEAS_DIM);
     
     // Add measurement noise: S = HPHT + R
     float S[MEAS_DIM][MEAS_DIM];
-    for (int i = 0; i < MEAS_DIM; i++) {
-        for (int j = 0; j < MEAS_DIM; j++) {
-            S[i][j] = HPHT[i][j] + R[i][j];
-        }
-    }
+	matrix_add((float*)HPHT,(float*)R,(float*)S,MEAS_DIM,MEAS_DIM);
     
     // Calculate Kalman gain: K = P*H'*S^(-1)
     // First, calculate S inverse (using a simplified approach for a 3x3 matrix)
     float S_inv[MEAS_DIM][MEAS_DIM];
-    float det = S[0][0] * (S[1][1] * S[2][2] - S[1][2] * S[2][1]) -
-                S[0][1] * (S[1][0] * S[2][2] - S[1][2] * S[2][0]) +
-                S[0][2] * (S[1][0] * S[2][1] - S[1][1] * S[2][0]);
-    float inv_det = 1.0f / det;
-    
-    S_inv[0][0] = (S[1][1] * S[2][2] - S[1][2] * S[2][1]) * inv_det;
-    S_inv[0][1] = (S[0][2] * S[2][1] - S[0][1] * S[2][2]) * inv_det;
-    S_inv[0][2] = (S[0][1] * S[1][2] - S[0][2] * S[1][1]) * inv_det;
-    S_inv[1][0] = (S[1][2] * S[2][0] - S[1][0] * S[2][2]) * inv_det;
-    S_inv[1][1] = (S[0][0] * S[2][2] - S[0][2] * S[2][0]) * inv_det;
-    S_inv[1][2] = (S[0][2] * S[1][0] - S[0][0] * S[1][2]) * inv_det;
-    S_inv[2][0] = (S[1][0] * S[2][1] - S[1][1] * S[2][0]) * inv_det;
-    S_inv[2][1] = (S[0][1] * S[2][0] - S[0][0] * S[2][1]) * inv_det;
-    S_inv[2][2] = (S[0][0] * S[1][1] - S[0][1] * S[1][0]) * inv_det;
+
+	int ret = matrix_inverse_3x3(S,S_inv);
+	if(ret == -1) return;
     
     // Calculate PH'
     float PHT[STATE_DIM][MEAS_DIM] = {0};
-    for (int i = 0; i < STATE_DIM; i++) {
-        for (int j = 0; j < MEAS_DIM; j++) {
-            for (int k = 0; k < STATE_DIM; k++) {
-                PHT[i][j] += P[i][k] * H[j][k];  // Note: using H[j][k] instead of H[k][j] for transpose
-            }
-        }
-    }
-    
+
+	matrix_multiply((float*)P,(float*)HT,(float*)PHT,STATE_DIM,STATE_DIM,MEAS_DIM);
+   
+
     // Calculate Kalman gain = PH' * S_inv
     float K[STATE_DIM][MEAS_DIM] = {0};
-    for (int i = 0; i < STATE_DIM; i++) {
-        for (int j = 0; j < MEAS_DIM; j++) {
-            for (int k = 0; k < MEAS_DIM; k++) {
-                K[i][j] += PHT[i][k] * S_inv[k][j];
-            }
-        }
-    }
+
+	matrix_multiply((float*)PHT,(float*)S_inv,(float*)K,STATE_DIM,MEAS_DIM,MEAS_DIM);
     
     // Update state: X = X + K*y
     for (int i = 0; i < STATE_DIM; i++) {
@@ -230,15 +193,9 @@ void EKF_Update(float accel[3], float mx, float my, float mz) {
     // Update covariance: P = (I - K*H)*P
     float KH[STATE_DIM][STATE_DIM] = {0};
     float IKH[STATE_DIM][STATE_DIM];
+
+	matrix_multiply((float*)K,(float*)H,(float*)KH,STATE_DIM,MEAS_DIM,STATE_DIM);
     
-    // Calculate K*H
-    for (int i = 0; i < STATE_DIM; i++) {
-        for (int j = 0; j < STATE_DIM; j++) {
-            for (int k = 0; k < MEAS_DIM; k++) {
-                KH[i][j] += K[i][k] * H[k][j];
-            }
-        }
-    }
     
     // Calculate I - K*H
     for (int i = 0; i < STATE_DIM; i++) {
@@ -249,13 +206,7 @@ void EKF_Update(float accel[3], float mx, float my, float mz) {
     
     // Calculate (I - K*H)*P
     float IKHP[STATE_DIM][STATE_DIM] = {0};
-    for (int i = 0; i < STATE_DIM; i++) {
-        for (int j = 0; j < STATE_DIM; j++) {
-            for (int k = 0; k < STATE_DIM; k++) {
-                IKHP[i][j] += IKH[i][k] * P[k][j];
-            }
-        }
-    }
+	matrix_multiply((float*)IKH,(float*)P,(float*)IKHP,STATE_DIM,STATE_DIM,STATE_DIM);
     
     // Update P
     for (int i = 0; i < STATE_DIM; i++) {
@@ -264,139 +215,3 @@ void EKF_Update(float accel[3], float mx, float my, float mz) {
         }
     }
 }
-/** 
- * Multiplies two matrices: C = A * B
- * 
- * @param A Input matrix of size m x n
- * @param B Input matrix of size n x p
- * @param C Output matrix of size m x p
- * @param m Number of rows in A
- * @param n Number of columns in A / rows in B
- * @param p Number of columns in B
- */
-void matrix_multiply(float *A, float *B, float *C, int m, int n, int p) {
-    // Initialize C to zeros
-    for (int i = 0; i < m * p; i++) {
-        C[i] = 0.0f;
-    }
-    
-    // Perform matrix multiplication
-    for (int i = 0; i < m; i++) {
-        for (int j = 0; j < p; j++) {
-            for (int k = 0; k < n; k++) {
-                // C[i][j] += A[i][k] * B[k][j]
-                C[i * p + j] += A[i * n + k] * B[k * p + j];
-            }
-        }
-    }
-}
-
-/**
- * Computes the transpose of a matrix: AT = A^T
- * 
- * @param A Input matrix of size m x n
- * @param AT Output matrix of size n x m
- * @param m Number of rows in A
- * @param n Number of columns in A
- */
-void matrix_transpose(float *A, float *AT, int m, int n) {
-    for (int i = 0; i < m; i++) {
-        for (int j = 0; j < n; j++) {
-            // AT[j][i] = A[i][j]
-            AT[j * m + i] = A[i * n + j];
-        }
-    }
-}
-
-/**
- * Computes the inverse of a square matrix: Ainv = A^(-1)
- * This implementation uses Gaussian elimination with partial pivoting
- * and is suitable for small matrices (works best for n <= 10)
- * 
- * @param A Input square matrix of size n x n
- * @param Ainv Output matrix of size n x n
- * @param n Matrix dimension
- */
-void matrix_inverse(float *A, float *Ainv, int n) {
-    // Create augmented matrix [A|I]
-    float *augmented = (float *)malloc(2 * n * n * sizeof(float));
-    if (augmented == NULL) {
-        // Handle memory allocation failure
-        return;
-    }
-    
-    // Initialize augmented matrix [A|I]
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            // Left side: copy A
-            augmented[i * (2 * n) + j] = A[i * n + j];
-            // Right side: identity matrix
-            augmented[i * (2 * n) + (j + n)] = (i == j) ? 1.0f : 0.0f;
-        }
-    }
-    
-    // Gaussian elimination with partial pivoting
-    for (int i = 0; i < n; i++) {
-        // Find pivot
-        int max_row = i;
-        float max_val = fabsf(augmented[i * (2 * n) + i]);
-        
-        for (int k = i + 1; k < n; k++) {
-            float val = fabsf(augmented[k * (2 * n) + i]);
-            if (val > max_val) {
-                max_val = val;
-                max_row = k;
-            }
-        }
-        
-        // Swap rows if needed
-        if (max_row != i) {
-            for (int j = 0; j < 2 * n; j++) {
-                float temp = augmented[i * (2 * n) + j];
-                augmented[i * (2 * n) + j] = augmented[max_row * (2 * n) + j];
-                augmented[max_row * (2 * n) + j] = temp;
-            }
-        }
-        
-        // Scale pivot row
-        float pivot = augmented[i * (2 * n) + i];
-        if (fabsf(pivot) < 1e-10) {
-            // Matrix is singular or nearly singular
-            free(augmented);
-            // Fill result with identity as a fallback
-            for (int row = 0; row < n; row++) {
-                for (int col = 0; col < n; col++) {
-                    Ainv[row * n + col] = (row == col) ? 1.0f : 0.0f;
-                }
-            }
-            return;
-        }
-        
-        for (int j = 0; j < 2 * n; j++) {
-            augmented[i * (2 * n) + j] /= pivot;
-        }
-        
-        // Eliminate other rows
-        for (int k = 0; k < n; k++) {
-            if (k != i) {
-                float factor = augmented[k * (2 * n) + i];
-                for (int j = 0; j < 2 * n; j++) {
-                    augmented[k * (2 * n) + j] -= factor * augmented[i * (2 * n) + j];
-                }
-            }
-        }
-    }
-    
-    // Extract inverse from right side of augmented matrix
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            Ainv[i * n + j] = augmented[i * (2 * n) + (j + n)];
-        }
-    }
-    
-    free(augmented);
-}
-
-
-
-

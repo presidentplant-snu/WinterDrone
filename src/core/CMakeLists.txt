@@ -1,6 +1,7 @@
 # Create core library with all core source files
 add_library(core 
 	ekf/ekf.c
+	linalg/linalg.c
 )
 
 # Make the core directory available as an include path
