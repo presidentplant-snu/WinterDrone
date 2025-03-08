@@ -25,7 +25,9 @@ void sensors_init(){
 	sleep_ms(1000);
 	initMPU(i2c_default,ACCEL_16G,GYRO_2000_DPS,DLPF_2);
 	initBMP(i2c_default);
+}
 
+void sensors_calibrate(){
 	calibrate_mpu6050();
 	calibrateBMP();
 }
@@ -46,7 +48,7 @@ void sensors_task(__unused void *params){
 	int32_t temp = 0;
 
 	EKF_State ekf;
-	ekf_init(&ekf, SENSOR_DELAY/1000.0f, 0.001f, 0.1f, 0.0001f);
+	ekf_init(&ekf, SENSOR_DELAY/1000.0f, 0.001f, 0.1f, 0.1f);
 	while(true){
 		// MPU6050 EKF code
 		int ret = readMPUCalibrated(accel,gyro,&tempMPU);
