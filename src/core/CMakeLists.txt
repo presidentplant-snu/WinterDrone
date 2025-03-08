@@ -2,6 +2,7 @@
 add_library(core 
 	ekf/ekf.c
 	linalg/linalg.c
+	pid/pid.c
 )
 
 # Make the core directory available as an include path

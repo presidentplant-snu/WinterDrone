@@ -59,9 +59,6 @@ target_link_libraries(${PROJECT_NAME}
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
 pico_enable_stdio_uart(${PROJECT_NAME} 0)
 
-# Wait 3s for serial to start for debugging
-set(PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS 3000)
-
 # Set Default IP for AP
 pico_configure_ip4_address(${PROJECT_NAME} PRIVATE
     CYW43_DEFAULT_IP_AP_ADDRESS 192.168.4.1
