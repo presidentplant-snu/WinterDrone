@@ -1,10 +1,12 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 
+#include "config.h"
+
 uint8_t motorPins[4];  // Store motor GPIO pins
 uint8_t pwmSlices[4];  // Store corresponding PWM slice numbers
 
-void initMotors(uint8_t pins[4]) {
+void initMotors(const uint8_t pins[4]) {
     for (int i = 0; i < 4; i++) {
         motorPins[i] = pins[i];  // Store pin number
         
@@ -22,15 +24,17 @@ void initMotors(uint8_t pins[4]) {
     }
 }
 
-int setSpeeds(uint16_t speeds[4]) {
+int setSpeeds(const float speeds[4]) {
     for (int i = 0; i < 4; i++) {
-        int speed = speeds[i];
+        float speed = speeds[i];
+
+		if(speed > 1.0f) speed = 1.0f;
 
         // Ensure speed is between 0-100% and scale to 16-bit PWM (0-65535)
-        uint16_t duty = (speed * 65535) / 100;
+        uint16_t duty = (uint16_t) (65535.0f* MAX_THRUST * (float)speed);
 
         // Set PWM duty cycle
-        pwm_set_gpio_level(10, duty);
+        pwm_set_gpio_level(motorPins[i], duty);
     }
     return 0;
 }

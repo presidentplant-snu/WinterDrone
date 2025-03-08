@@ -2,5 +2,5 @@
 
 #pragma once
 
-int setSpeeds(uint16_t* speeds);
-int initMotors(uint8_t* pins);
+int initMotors(const uint8_t pins[4]);
+int setSpeeds(const float speeds[4]);
