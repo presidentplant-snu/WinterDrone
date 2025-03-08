@@ -33,12 +33,34 @@ static void event_handler(struct mg_connection *c, int ev, void *ev_data) {
 				else if(wm->data.buf[0] == 0x01){
 					g_controlData.armed = false;
 				}
+				else if (wm->data.buf[0] == 0x03){
+					if (xSemaphoreTake(xSensorSemaphore, pdMS_TO_TICKS(10)) == pdTRUE) {
+						// Create a buffer to hold the response data
+						uint8_t resp[9]; // 1 byte for command, 4 bytes for each float
+						resp[0] = 0x03;  // Same command code for response
+
+						// Copy the volatile float values to local non-volatile floats first
+						float current_pitch = g_sensorData.current_pitch;
+						float current_roll = g_sensorData.current_roll;
+
+						// Copy pitch float value to response buffer
+						memcpy(&resp[1], &current_pitch, sizeof(float));
+
+						// Copy roll float value to response buffer
+						memcpy(&resp[5], &current_roll, sizeof(float));
+
+						// Send the response back to the client
+						mg_ws_send(c, resp, sizeof(resp), WEBSOCKET_OP_BINARY);
+
+						xSemaphoreGive(xSensorSemaphore);
+					}
+				}
 			}
 			else if(wm->data.len == 5){
 				if(wm->data.buf[0] == 0x02){
 					g_controlData.throttle = wm->data.buf[1];
-					g_controlData.pitch = wm->data.buf[2];
-					g_controlData.yaw = wm->data.buf[3];
+					g_controlData.pitch = wm->data.buf[3];
+					g_controlData.yaw = wm->data.buf[2];
 					g_controlData.roll = wm->data.buf[4];
 				}
 			}
@@ -52,7 +74,7 @@ static void event_handler(struct mg_connection *c, int ev, void *ev_data) {
 void wifi_server_task(__unused void *args) {
 	init_wifi(SSID,PSK,true);
 
-	sleep_ms(1000);
+	sleep_ms(500);
 
 	struct mg_mgr mgr;        // Initialise Mongoose event manager
 	mg_log_set(1);  // Set log level

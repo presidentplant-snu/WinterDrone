@@ -9,6 +9,12 @@ const droneState = {
 	telemetryIntervalId: null
 };
 
+const sensorData = {
+	current_pitch: 0,
+	current_roll: 0
+}
+
+
 // DOM Elements
 const controllerValues = document.getElementById('controller-values');
 const telemetryLog = document.getElementById('telemetry-log');
@@ -74,6 +80,36 @@ telemetryToggle.addEventListener('click', function() {
 	chevron.classList.toggle('up');
 });
 
+
+socket.addEventListener("message", function(event) {
+    // Check if it's binary data
+	console.log(event);
+    if (event.data instanceof Blob) {
+        // Convert Blob to ArrayBuffer
+        event.data.arrayBuffer().then(buffer => {
+            // Create a DataView to read the binary data
+            const dataView = new DataView(buffer);
+            
+            // Check the command byte (first byte)
+            const commandByte = dataView.getUint8(0);
+            
+            // If it's the sensor data command (0x02)
+            if (commandByte === 0x03 && buffer.byteLength === 9) {
+                // Extract the float values (pitch at offset 1, roll at offset 5)
+                sensorData.current_pitch = dataView.getFloat32(1, true); // true for little-endian
+                sensorData.current_roll = dataView.getFloat32(5, true);
+				updateControllerValues();
+            }
+        });
+    }
+});
+
+function getSensorData(){
+	const packet = new Uint8Array(1);
+	packet[0] = 0x03;
+	socket.send(packet);
+}
+
 /* TELEMETRY */
 // Function to send telemetry data
 function sendTelemetry() {
@@ -107,7 +143,7 @@ function startTelemetry() {
 
 	// Set up interval for regular telemetry
 	droneState.telemetryIntervalId = setInterval(sendTelemetry, droneState.telemetryInterval);
-
+	setInterval(getSensorData, 50);
 	addLogEntry(`Telemetry started (${droneState.telemetryInterval}ms interval)`);
 }
 
@@ -175,6 +211,10 @@ function setupJoystick(stickElement, joystickElement, updateFunction) {
 		const centerY = joystickRect.top + joystickRect.height / 2;
 
 		// Get position either from mouse or touch
+		if (e.type !== 'touchmove')
+		{
+			e.touches = [1];
+		}
 		for(touch of e.touches){
 		let clientX, clientY;
 		if (e.type === 'touchmove') {
@@ -232,15 +272,20 @@ function setupJoystick(stickElement, joystickElement, updateFunction) {
 
 		stickElement.style.transition = '0.2s';
 		// Don't reset throttle for stick1
-		if(e.changedTouches[0].target.id == "stick1"){
-		console.log(`translate(-50%,calc(-50%+${-(droneState.throttle*2 - 100)/100 * maxDistance}px))`);
+		if(e.type === 'touchend' && e.changedTouches[0].target.id == "stick1"){
+		//console.log(`translate(-50%,calc(-50%+${-(droneState.throttle*2 - 100)/100 * maxDistance}px))`);
 		stickElement.style.transform = `translate(-50%, calc(-50% + ${-(droneState.throttle*2 - 100)/100 * maxDistance}px))`;
 		updateFunction(0, NaN);
 		}
 		else{
-		stickElement.style.transform = 'translate(-50%, -50%)';
-		updateFunction(0, 0);
+		if(e.target.id == "stick1"){
+		stickElement.style.transform = `translate(-50%, calc(-50% + ${-(droneState.throttle*2 - 100)/100 * maxDistance}px))`;
+		updateFunction(0, NaN);
 		}
+			else{
+				stickElement.style.transform = 'translate(-50%, -50%)';
+				updateFunction(0,0);
+			}
 
 		// Update display
 		updateControllerValues();
@@ -285,7 +330,7 @@ function resetJoysticks() {
 
 // Function to update the controller values display
 function updateControllerValues() {
-	controllerValues.textContent = `Throttle: ${droneState.throttle}%, Yaw: ${droneState.yaw}%, Pitch: ${droneState.pitch}°, Roll: ${droneState.roll}°`;
+	controllerValues.textContent = `Throttle: ${droneState.throttle}%, Yaw: ${droneState.yaw}%, Pitch: ${sensorData.current_pitch.toFixed(2)}°, Roll: ${sensorData.current_roll.toFixed(2)}°`;
 }
 
 // Function to add entry to telemetry log

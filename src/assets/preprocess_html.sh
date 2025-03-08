@@ -1,4 +1,4 @@
 #!/bin/bash
 
 python3 combine.py 
-xxd -i combined_index.html > ../drivers/wifi/combined_html.h
+xxd -i combined_index.html > ../tasks/combined_html.h
